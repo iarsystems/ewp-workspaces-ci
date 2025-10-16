@@ -1,0 +1,84 @@
+/*
+  Copyright (c) 2024-2025 IAR Systems AB.
+  See LICENSE for detailed license information.
+*/
+
+pipeline {
+  agent {
+    /* Docker image and container execution arguments. Update it according to your needs.
+       Visit https://github.com/iarsystems/containers/wiki/Arm-image-variant for an overview
+       of other pre-built container image options for Arm targets.
+     */
+    docker { 
+      image 'ghcr.io/iarsystems/arm:9.70.1-st'
+      args '-e HOME=${WORKSPACE}'
+    }
+  }
+  /* The environment variables: change it according to your needs.
+     The IAR_LMS_BEARER_TOKEN is retrieved from Jenkins' Credentials.
+     (https://www.jenkins.io/doc/book/security/credentials/#working-with-credentials)
+   */
+  environment {
+    IAR_LMS_BEARER_TOKEN = credentials('iar_ci_token')
+    TARGET_DIR           = "targets/arm"
+    BUILD_TYPE           = 'Release'
+    CAPACITY             = '8'
+  }
+  stages {
+    stage('Test compiler') {
+      steps {
+        echo 'This stage tries to compile a simple input. When it fails, it is likely there is an issue with the compiler license activation.'
+        sh 'icc$(basename ${TARGET_DIR}) --version'
+        sh 'echo "main(){}" | icc$(basename ${TARGET_DIR}) -'
+      }
+    }
+    /* Build stages */
+    stage('Build: library') {
+      steps {
+        sh 'iarbuild ${TARGET_DIR}/library.ewp -build ${BUILD_TYPE} -parallel ${CAPACITY}'
+      }
+    }
+    stage('Build: test-crc16') {
+      steps {
+        sh 'iarbuild ${TARGET_DIR}/test-crc16.ewp -build ${BUILD_TYPE} -parallel ${CAPACITY}'
+      }
+    }
+    stage('Build: test-crc32') {
+      steps {
+        sh 'iarbuild ${TARGET_DIR}/test-crc32.ewp -build ${BUILD_TYPE} -parallel ${CAPACITY}'
+      }
+    }
+    /* Analysis stages */
+    stage('Analyze: library') {
+      steps {
+        sh 'iarbuild ${TARGET_DIR}/library.ewp -cstat_analyze ${BUILD_TYPE} -parallel ${CAPACITY}'
+      }
+    }
+    stage('Analyze: test-crc16') {
+      steps {
+        sh 'iarbuild ${TARGET_DIR}/test-crc16.ewp -cstat_analyze ${BUILD_TYPE} -parallel ${CAPACITY}'
+      }
+    }
+    stage('Analyze: test-crc32') {
+      steps {
+        sh 'iarbuild ${TARGET_DIR}/test-crc32.ewp -cstat_analyze ${BUILD_TYPE} -parallel ${CAPACITY}'
+      }
+    }
+  }
+  /* Post stages */
+  post {
+    always {
+      echo 'This will always execute at the pipeline ending.'
+      /* Load the C-STAT warnings for subsequentially populating the warnings-ng plugin */
+      sh 'icstat --db ${TARGET_DIR}/${BUILD_TYPE}/C-STAT/cstat.db load'
+      /* Populates the warnings-ng plugin using the recordIssues() function */
+      recordIssues(tools: [iar(), iarCstat()])
+    }
+    failure {
+      echo 'This will execute when one or more pipeline stages fail.'
+    }
+    success {
+      echo 'This will execute when all pipeline stages are succesful.'
+    }
+  }
+}
