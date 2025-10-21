@@ -15,50 +15,51 @@ pipeline {
   }
   /* The environment variables: change it according to your needs. */
   environment {
-    BX_BINDIR      = "/opt/iarsystems/bxarm/arm/bin"
-    BX_COMMON      = "/opt/iarsystems/bxarm/common/bin"
-    TARGET_DIR     = "targets/arm"
-    BUILD_TYPE     = 'Release'
-    CORES          = '8'
+    ARCH             = "arm"
+    BX_ARCH_DIR      = "/opt/iarsystems/bxarm/arm/bin"
+    BX_COMMON_DIR    = "/opt/iarsystems/bxarm/common/bin"
+    TARGET_DIR       = "targets/arm"
+    BUILD_TYPE       = 'Release'
+    CORES            = '8'
   }
   stages {
     stage('Test compiler') {
       steps {
         echo 'This stage tries to compile a simple input. When it fails, it is likely there is an issue with the compiler license activation.'
-        sh 'icc$(basename ${TARGET_DIR}) --version'
-        sh 'echo "main(){}" | icc$(basename ${TARGET_DIR}) -'
+        sh '${BX_ARCH_DIR}/icc${ARCH} --version'
+        sh 'echo "main(){}" | ${BX_ARCH_DIR}/icc${ARCH} -'
       }
     }
     /* Build stages */
     stage('Build: library') {
       steps {
-        sh '${BX_COMMON}/iarbuild ${TARGET_DIR}/library.ewp -build ${BUILD_TYPE} --parallel ${CORES}'
+        sh '${BX_COMMON_DIR}/iarbuild ${TARGET_DIR}/library.ewp -build ${BUILD_TYPE} --parallel ${CORES}'
       }
     }
     stage('Build: test-crc16') {
       steps {
-        sh '${BX_COMMON}/iarbuild ${TARGET_DIR}/test-crc16.ewp -build ${BUILD_TYPE} --parallel ${CORES}'
+        sh '${BX_COMMON_DIR}/iarbuild ${TARGET_DIR}/test-crc16.ewp -build ${BUILD_TYPE} --parallel ${CORES}'
       }
     }
     stage('Build: test-crc32') {
       steps {
-        sh '${BX_COMMON}/iarbuild ${TARGET_DIR}/test-crc32.ewp -build ${BUILD_TYPE} --parallel ${CORES}'
+        sh '${BX_COMMON_DIR}/iarbuild ${TARGET_DIR}/test-crc32.ewp -build ${BUILD_TYPE} --parallel ${CORES}'
       }
     }
     /* Analysis stages */
     stage('Analyze: library') {
       steps {
-        sh '${BX_COMMON}/iarbuild ${TARGET_DIR}/library.ewp -cstat_analyze ${BUILD_TYPE} --parallel ${CORES}'
+        sh '${BX_COMMON_DIR}/iarbuild ${TARGET_DIR}/library.ewp -cstat_analyze ${BUILD_TYPE} --parallel ${CORES}'
       }
     }
     stage('Analyze: test-crc16') {
       steps {
-        sh '${BX_COMMON}/iarbuild ${TARGET_DIR}/test-crc16.ewp -cstat_analyze ${BUILD_TYPE} --parallel ${CORES}'
+        sh '${BX_COMMON_DIR}/iarbuild ${TARGET_DIR}/test-crc16.ewp -cstat_analyze ${BUILD_TYPE} --parallel ${CORES}'
       }
     }
     stage('Analyze: test-crc32') {
       steps {
-        sh '${BX_COMMON}/iarbuild ${TARGET_DIR}/test-crc32.ewp -cstat_analyze ${BUILD_TYPE} --parallel ${CORES}'
+        sh '${BX_COMMON_DIR}/iarbuild ${TARGET_DIR}/test-crc32.ewp -cstat_analyze ${BUILD_TYPE} --parallel ${CORES}'
       }
     }
   }
@@ -67,7 +68,7 @@ pipeline {
     always {
       echo 'This will always execute at the pipeline ending.'
       /* Load the C-STAT warnings for subsequentially populating the warnings-ng plugin */
-      sh 'icstat --db ${TARGET_DIR}/${BUILD_TYPE}/C-STAT/cstat.db load'
+      sh '${BX_ARCH_DIR}/icstat --db ${TARGET_DIR}/${BUILD_TYPE}/C-STAT/cstat.db load'
       /* Populates the warnings-ng plugin using the recordIssues() function */
       recordIssues(tools: [iar(), iarCstat()])
     }
