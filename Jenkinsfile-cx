@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024-2025 IAR Systems AB.
+  Copyright (c) 2024-2026 IAR Systems AB.
   See LICENSE for detailed license information.
 */
 
@@ -10,7 +10,7 @@ pipeline {
        of other pre-built container image options for Arm targets.
      */
     docker { 
-      image 'ghcr.io/iarsystems/arm:9.70.1-st'
+      image 'ghcr.io/iarsystems/arm:10.10.2-st'
       args '-e HOME=${WORKSPACE} -e IAR_LMS_BEARER_TOKEN=${IAR_LMS_BEARER_TOKEN}'
     }
   }

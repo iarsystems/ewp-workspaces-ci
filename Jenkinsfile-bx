@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2021-2025 IAR Systems AB.
+  Copyright (c) 2021-2026 IAR Systems AB.
   See LICENSE for detailed license information.
 */
 
@@ -9,7 +9,7 @@ pipeline {
        Update it according to your needs.
      */
     docker { 
-      image 'iarsystems/bxarm:9.70.1'
+      image 'iarsystems/bxarm:9.70.4'
       args '-v LMS2:/usr/local/etc/IARSystems -e HOME=${WORKSPACE} --hostname ${NODE_NAME}'
     }
   }
